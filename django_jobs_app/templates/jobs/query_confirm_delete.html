@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Query - LinkedIn Jobs Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h3><i class="fas fa-trash"></i> Delete Query</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                
+                <p>Are you sure you want to delete the query <strong>"{{ query.name }}"</strong>?</p>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6>Query Details:</h6>
+                        <p><strong>Search:</strong> {{ query.keyword }}{% if query.location %} in {{ query.location }}{% endif %}</p>
+                        <p><strong>Frequency:</strong> {{ query.frequency }}</p>
+                        <p><strong>Jobs Found:</strong> {{ query.jobs.count }}</p>
+                        <p><strong>Created:</strong> {{ query.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                
+                {% if query.jobs.count > 0 %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This query has {{ query.jobs.count }} job(s) associated with it. 
+                        Deleting the query will also delete all associated job records.
+                    </div>
+                {% endif %}
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'jobs:query_detail' query.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete Query
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

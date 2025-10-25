@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ job.position }} at {{ job.company }} - LinkedIn Jobs Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>{{ job.position }}</h3>
+                    <div>
+                        {% if job.details_scraped %}
+                            <span class="badge bg-success">Details Available</span>
+                        {% elif fetch_task_id %}
+                            <span class="badge bg-info" id="status-badge">
+                                <i class="fas fa-spinner fa-spin"></i> Fetching Details...
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning">Details Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-building"></i> Company:</strong> {{ job.company }}</p>
+                        <p><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> {{ job.location }}</p>
+                        <p><strong><i class="fas fa-calendar"></i> Posted:</strong> {{ job.scraped_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="fas fa-search"></i> Query:</strong> 
+                            <a href="{% url 'jobs:query_detail' job.job_query.pk %}">{{ job.job_query.name }}</a>
+                        </p>
+                        <p><strong><i class="fas fa-link"></i> Job URL:</strong> 
+                            <a href="{{ job.job_url }}" target="_blank" class="text-decoration-none">
+                                View on LinkedIn <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </p>
+                        {% if job.salary %}
+                            <p><strong><i class="fas fa-dollar-sign"></i> Salary:</strong> {{ job.salary }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if job.job_description %}
+                    <hr>
+                    <h5><i class="fas fa-file-text"></i> Job Description</h5>
+                    <div class="job-description">
+                        {{ job.job_description|linebreaks }}
+                    </div>
+                {% elif fetch_task_id %}
+                    <hr>
+                    <h5><i class="fas fa-file-text"></i> Job Description</h5>
+                    <div class="job-description">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Fetching job description...</p>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if job.benefits %}
+                    <hr>
+                    <h5><i class="fas fa-gift"></i> Benefits & Perks</h5>
+                    <div class="benefits">
+                        {{ job.benefits|linebreaks }}
+                    </div>
+                {% endif %}
+                
+                {% if job.skills %}
+                    <hr>
+                    <h5><i class="fas fa-tools"></i> Skills</h5>
+                    <div class="skills">
+                        {% for skill in job.skills %}
+                            <span class="badge bg-secondary me-1 mb-1">{{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Job Details</h5>
+            </div>
+            <div class="card-body">
+                {% if job.job_title %}
+                    <p><strong>Job Title:</strong> {{ job.job_title }}</p>
+                {% endif %}
+                
+                {% if job.company_name %}
+                    <p><strong>Company:</strong> {{ job.company_name }}</p>
+                {% endif %}
+                
+                {% if job.posted_date %}
+                    <p><strong>Posted Date:</strong> {{ job.posted_date }}</p>
+                {% endif %}
+                
+                {% if job.applicant_count %}
+                    <p><strong>Applicants:</strong> {{ job.applicant_count }}</p>
+                {% endif %}
+                
+                {% if job.employment_type %}
+                    <p><strong>Employment Type:</strong> {{ job.employment_type }}</p>
+                {% endif %}
+                
+                {% if job.seniority_level %}
+                    <p><strong>Seniority Level:</strong> {{ job.seniority_level }}</p>
+                {% endif %}
+                
+                {% if job.job_function %}
+                    <p><strong>Job Function:</strong> {{ job.job_function }}</p>
+                {% endif %}
+                
+                {% if job.industries %}
+                    <p><strong>Industries:</strong> {{ job.industries }}</p>
+                {% endif %}
+                
+                {% if job.company_size %}
+                    <p><strong>Company Size:</strong> {{ job.company_size }}</p>
+                {% endif %}
+                
+                <hr>
+                <p><strong>Scraped:</strong> {{ job.scraped_at|timesince }} ago</p>
+                
+                {% if job.details_scraped_at %}
+                    <p><strong>Details Updated:</strong> {{ job.details_scraped_at|timesince }} ago</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ job.job_url }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt"></i> View on LinkedIn
+                    </a>
+                    
+                    {% if not job.details_scraped %}
+                        <button class="btn btn-outline-info" onclick="fetchJobDetails({{ job.pk }})">
+                            <i class="fas fa-download"></i> Fetch Details
+                        </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'jobs:query_detail' job.job_query.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-search"></i> View Query
+                    </a>
+                    
+                    <a href="{% url 'jobs:job_list' %}?query={{ job.job_query.pk }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list"></i> All Jobs from Query
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        {% if job.company_logo %}
+            <div class="card mt-3">
+                <div class="card-body text-center">
+                    <img src="{{ job.company_logo }}" alt="{{ job.company }} logo" class="img-fluid" style="max-height: 100px;">
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fetchJobDetails(jobId) {
+    fetch(`/jobs/${jobId}/fetch-details/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+// Auto-check fetch status if we have a task ID
+{% if fetch_task_id %}
+let checkInterval;
+let checkCount = 0;
+const maxChecks = 60; // Maximum 60 checks (5 minutes at 5-second intervals)
+
+function checkFetchStatus() {
+    checkCount++;
+    
+    fetch(`/jobs/{{ job.pk }}/check-status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.completed) {
+                clearInterval(checkInterval);
+                if (data.success) {
+                    // Update status badge
+                    const statusBadge = document.getElementById('status-badge');
+                    if (statusBadge) {
+                        statusBadge.innerHTML = '<i class="fas fa-check"></i> Details Fetched!';
+                        statusBadge.className = 'badge bg-success';
+                    }
+                    
+                    // Reload page after a short delay to show success
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    // Show error
+                    const statusBadge = document.getElementById('status-badge');
+                    if (statusBadge) {
+                        statusBadge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Fetch Failed';
+                        statusBadge.className = 'badge bg-danger';
+                    }
+                }
+            } else if (checkCount >= maxChecks) {
+                // Stop checking after max attempts
+                clearInterval(checkInterval);
+                const statusBadge = document.getElementById('status-badge');
+                if (statusBadge) {
+                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> Taking longer than expected...';
+                    statusBadge.className = 'badge bg-warning';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking fetch status:', error);
+            if (checkCount >= maxChecks) {
+                clearInterval(checkInterval);
+            }
+        });
+}
+
+// Start checking every 5 seconds
+checkInterval = setInterval(checkFetchStatus, 5000);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}All Jobs - LinkedIn Jobs Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-briefcase"></i> All Jobs</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'jobs:query_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Query
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="query" class="form-label">Filter by Query</label>
+                <select class="form-select" id="query" name="query">
+                    <option value="">All Queries</option>
+                    {% for query in queries %}
+                        <option value="{{ query.pk }}" {% if selected_query == query.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ query.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="details_scraped" class="form-label">Details Status</label>
+                <select class="form-select" id="details_scraped" name="details_scraped">
+                    <option value="">All Jobs</option>
+                    <option value="true" {% if selected_details_scraped == 'true' %}selected{% endif %}>With Details</option>
+                    <option value="false" {% if selected_details_scraped == 'false' %}selected{% endif %}>Details Pending</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="posted_date" class="form-label">Posted Date</label>
+                <select class="form-select" id="posted_date" name="posted_date" onchange="toggleCustomDateRange()">
+                    <option value="">All Dates</option>
+                    <option value="today" {% if selected_posted_date == 'today' %}selected{% endif %}>Today</option>
+                    <option value="week" {% if selected_posted_date == 'week' %}selected{% endif %}>Last Week</option>
+                    <option value="month" {% if selected_posted_date == 'month' %}selected{% endif %}>Last Month</option>
+                    <option value="custom" {% if selected_posted_date == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+                <div class="form-text">Filter existing jobs in database</div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'jobs:job_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+        
+        <!-- Custom Date Range -->
+        <div id="custom-date-range" class="row g-3 mt-2" {% if selected_posted_date == 'custom' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+            <div class="col-md-6">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-md-6">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if jobs %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Company</th>
+                    <th>Location</th>
+                    <th>Query</th>
+                    <th>Posted Date</th>
+                    <th>Scraped</th>
+                    <th>Details</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'jobs:job_detail' job.pk %}" class="text-decoration-none">
+                                <strong>{{ job.position }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ job.company }}</td>
+                        <td>{{ job.location }}</td>
+                        <td>
+                            <a href="{% url 'jobs:query_detail' job.job_query.pk %}" class="text-decoration-none">
+                                {{ job.job_query.name }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if job.posted_date %}
+                                <small class="text-muted">{{ job.posted_date }}</small>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ job.scraped_at|timesince }} ago</small>
+                        </td>
+                        <td>
+                            {% if job.details_scraped %}
+                                <span class="badge bg-success">Available</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if not job.details_scraped %}
+                                    <button class="btn btn-outline-info" onclick="fetchJobDetails({{ job.pk }})" title="Fetch Details">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Job pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if selected_query %}&query={{ selected_query }}{% endif %}{% if selected_details_scraped %}&details_scraped={{ selected_details_scraped }}{% endif %}{% if selected_posted_date %}&posted_date={{ selected_posted_date }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">&laquo; First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_query %}&query={{ selected_query }}{% endif %}{% if selected_details_scraped %}&details_scraped={{ selected_details_scraped }}{% endif %}{% if selected_posted_date %}&posted_date={{ selected_posted_date }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_query %}&query={{ selected_query }}{% endif %}{% if selected_details_scraped %}&details_scraped={{ selected_details_scraped }}{% endif %}{% if selected_posted_date %}&posted_date={{ selected_posted_date }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_query %}&query={{ selected_query }}{% endif %}{% if selected_details_scraped %}&details_scraped={{ selected_details_scraped }}{% endif %}{% if selected_posted_date %}&posted_date={{ selected_posted_date }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Last &raquo;</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+        <h3 class="text-muted">No jobs found</h3>
+        <p class="text-muted">
+            {% if selected_query or selected_details_scraped or selected_posted_date %}
+                No jobs match your current filters. Try adjusting your search criteria.
+            {% else %}
+                Create a job query to start tracking LinkedIn jobs.
+            {% endif %}
+        </p>
+        <a href="{% url 'jobs:query_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Your First Query
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fetchJobDetails(jobId) {
+    fetch(`/jobs/${jobId}/fetch-details/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function toggleCustomDateRange() {
+    const postedDateSelect = document.getElementById('posted_date');
+    const customDateRange = document.getElementById('custom-date-range');
+    
+    if (postedDateSelect.value === 'custom') {
+        customDateRange.style.display = 'block';
+    } else {
+        customDateRange.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if query %}Edit Query{% else %}Create Query{% endif %} - LinkedIn Jobs Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-{% if query %}edit{% else %}plus{% endif %}"></i> 
+                    {% if query %}Edit Query{% else %}Create New Query{% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Query Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ query.name|default:'' }}" required>
+                                <div class="form-text">Give your query a descriptive name</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="frequency" class="form-label">Frequency *</label>
+                                <select class="form-select" id="frequency" name="frequency" required>
+                                    {% for value, label in frequency_choices %}
+                                        <option value="{{ value }}" {% if query.frequency == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h5><i class="fas fa-search"></i> Search Parameters</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="keyword" class="form-label">Keyword</label>
+                                <input type="text" class="form-control" id="keyword" name="keyword" 
+                                       value="{{ query.keyword|default:'' }}" placeholder="e.g., Python Developer">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ query.location|default:'' }}" placeholder="e.g., New York, NY">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="job_type" class="form-label">Job Type</label>
+                                <select class="form-select" id="job_type" name="job_type">
+                                    <option value="">Any</option>
+                                    <option value="full time" {% if query.job_type == 'full time' %}selected{% endif %}>Full Time</option>
+                                    <option value="part time" {% if query.job_type == 'part time' %}selected{% endif %}>Part Time</option>
+                                    <option value="contract" {% if query.job_type == 'contract' %}selected{% endif %}>Contract</option>
+                                    <option value="temporary" {% if query.job_type == 'temporary' %}selected{% endif %}>Temporary</option>
+                                    <option value="internship" {% if query.job_type == 'internship' %}selected{% endif %}>Internship</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="remote_filter" class="form-label">Remote Filter</label>
+                                <select class="form-select" id="remote_filter" name="remote_filter">
+                                    <option value="">Any</option>
+                                    <option value="on-site" {% if query.remote_filter == 'on-site' %}selected{% endif %}>On-site</option>
+                                    <option value="remote" {% if query.remote_filter == 'remote' %}selected{% endif %}>Remote</option>
+                                    <option value="hybrid" {% if query.remote_filter == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="experience_level" class="form-label">Experience Level</label>
+                                <select class="form-select" id="experience_level" name="experience_level">
+                                    <option value="">Any</option>
+                                    <option value="internship" {% if query.experience_level == 'internship' %}selected{% endif %}>Internship</option>
+                                    <option value="entry level" {% if query.experience_level == 'entry level' %}selected{% endif %}>Entry Level</option>
+                                    <option value="associate" {% if query.experience_level == 'associate' %}selected{% endif %}>Associate</option>
+                                    <option value="senior" {% if query.experience_level == 'senior' %}selected{% endif %}>Senior</option>
+                                    <option value="director" {% if query.experience_level == 'director' %}selected{% endif %}>Director</option>
+                                    <option value="executive" {% if query.experience_level == 'executive' %}selected{% endif %}>Executive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="salary" class="form-label">Minimum Salary</label>
+                                <select class="form-select" id="salary" name="salary">
+                                    <option value="">Any</option>
+                                    <option value="40000" {% if query.salary == '40000' %}selected{% endif %}>$40,000+</option>
+                                    <option value="60000" {% if query.salary == '60000' %}selected{% endif %}>$60,000+</option>
+                                    <option value="80000" {% if query.salary == '80000' %}selected{% endif %}>$80,000+</option>
+                                    <option value="100000" {% if query.salary == '100000' %}selected{% endif %}>$100,000+</option>
+                                    <option value="120000" {% if query.salary == '120000' %}selected{% endif %}>$120,000+</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date_since_posted" class="form-label">Date Posted</label>
+                                <select class="form-select" id="date_since_posted" name="date_since_posted">
+                                    <option value="">Any</option>
+                                    <option value="24hr" {% if query.date_since_posted == '24hr' %}selected{% endif %}>Past 24 hours</option>
+                                    <option value="past week" {% if query.date_since_posted == 'past week' %}selected{% endif %}>Past week</option>
+                                    <option value="past month" {% if query.date_since_posted == 'past month' %}selected{% endif %}>Past month</option>
+                                </select>
+                                <div class="form-text">LinkedIn API supports these time ranges only</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sort_by" class="form-label">Sort By</label>
+                                <select class="form-select" id="sort_by" name="sort_by">
+                                    <option value="">Default</option>
+                                    <option value="recent" {% if query.sort_by == 'recent' %}selected{% endif %}>Most Recent</option>
+                                    <option value="relevant" {% if query.sort_by == 'relevant' %}selected{% endif %}>Most Relevant</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="limit" class="form-label">Job Limit</label>
+                                <input type="number" class="form-control" id="limit" name="limit" 
+                                       value="{{ query.limit|default:25 }}" min="1" max="100">
+                                <div class="form-text">Maximum number of jobs to fetch per run</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="custom_schedule" class="form-label">Custom Schedule</label>
+                                <input type="text" class="form-control" id="custom_schedule" name="custom_schedule" 
+                                       value="{{ query.custom_schedule|default:'' }}" placeholder="e.g., 0 9 * * 1-5">
+                                <div class="form-text">Cron expression (only if frequency is Custom)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h5><i class="fas fa-filter"></i> Additional Filters</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="has_verification" name="has_verification" 
+                                       {% if query.has_verification %}checked{% endif %}>
+                                <label class="form-check-label" for="has_verification">
+                                    Only verified companies
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="under_10_applicants" name="under_10_applicants" 
+                                       {% if query.under_10_applicants %}checked{% endif %}>
+                                <label class="form-check-label" for="under_10_applicants">
+                                    Under 10 applicants
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                               {% if not query or query.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">
+                            <strong>Active</strong> - Query will run automatically according to schedule
+                        </label>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if query %}{% url 'jobs:query_detail' query.pk %}{% else %}{% url 'jobs:query_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 
+                            {% if query %}Update Query{% else %}Create Query{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

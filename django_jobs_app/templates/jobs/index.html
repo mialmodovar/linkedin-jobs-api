@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - LinkedIn Jobs Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <p class="text-muted">Monitor your LinkedIn job searches and track new opportunities.</p>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ total_queries }}</h4>
+                                <p class="mb-0">Total Queries</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-search fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ active_queries }}</h4>
+                                <p class="mb-0">Active Queries</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-play fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ total_jobs }}</h4>
+                                <p class="mb-0">Total Jobs</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-briefcase fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ jobs_with_details }}</h4>
+                                <p class="mb-0">With Details</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-search"></i> Recent Queries</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_queries %}
+                            <div class="list-group">
+                                {% for query in recent_queries %}
+                                    <a href="{% url 'jobs:query_detail' query.pk %}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ query.name }}</h6>
+                                            <small class="text-muted">{{ query.frequency }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ query.keyword }} {% if query.location %}in {{ query.location }}{% endif %}</p>
+                                        <small>
+                                            {% if query.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                            Last run: {% if query.last_run %}{{ query.last_run|timesince }} ago{% else %}Never{% endif %}
+                                        </small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No queries yet. <a href="{% url 'jobs:query_create' %}">Create your first query</a>!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-briefcase"></i> Recent Jobs</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_jobs %}
+                            <div class="list-group">
+                                {% for job in recent_jobs %}
+                                    <a href="{% url 'jobs:job_detail' job.pk %}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ job.position }}</h6>
+                                            <small class="text-muted">{{ job.scraped_at|timesince }} ago</small>
+                                        </div>
+                                        <p class="mb-1">{{ job.company }} - {{ job.location }}</p>
+                                        <small>
+                                            {% if job.details_scraped %}
+                                                <span class="badge bg-success">Details Available</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Details Pending</span>
+                                            {% endif %}
+                                        </small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No jobs found yet. Create a query to start tracking jobs!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'jobs:query_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Query
+                    </a>
+                    <a href="{% url 'jobs:query_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i> Manage Queries
+                    </a>
+                    <a href="{% url 'jobs:job_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list"></i> View All Jobs
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> How It Works</h5>
+            </div>
+            <div class="card-body">
+                <ol class="small">
+                    <li>Create a job search query with your criteria</li>
+                    <li>Set how often you want it to run (daily, weekly, etc.)</li>
+                    <li>The system will automatically search for jobs</li>
+                    <li>Job details are fetched and stored in the database</li>
+                    <li>View and manage your job listings</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -66,7 +66,6 @@ def run_job_query(query_id):
                     'salary': job_data.get('salary', ''),
                     'company_logo': job_data.get('company_logo', ''),
                     'ago_time': job_data.get('ago_time', ''),
-                    'is_reposted': False,  # Default value for new jobs
                     'job_query': query,
                 }
             )

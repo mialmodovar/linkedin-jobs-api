@@ -535,13 +535,12 @@ def _parse_job_metadata(soup) -> tuple[str, bool, str]:
     from the new LinkedIn HTML structure
     
     Returns:
-        tuple: (posted_date, is_reposted, applicant_count)
+        tuple: (posted_date, applicant_count)
     """
     from datetime import datetime, timedelta
     import re
     
     posted_date = ''
-    is_reposted = False
     applicant_count = ''
     
     try:
@@ -551,44 +550,9 @@ def _parse_job_metadata(soup) -> tuple[str, bool, str]:
             posted_time_text = posted_time_elem.get_text(strip=True)
             print(f"   🕒 FOUND POSTED TIME: '{posted_time_text}'")
             
-            # Check for reposted status in the same element
-            if 'reposted' in posted_time_text.lower():
-                print(f"   🔄 REPOSTED DETECTION: Found 'reposted' in posted time")
-                is_reposted = True
         else:
             print(f"   ❌ POSTED TIME ELEMENT NOT FOUND")
         
-        # Additional search for reposted indicators in the main job section only
-        print(f"   🔍 SEARCHING FOR REPOSTED INDICATORS IN MAIN JOB SECTION:")
-        
-        # Look for the main job card section
-        main_job_section = soup.find('section', class_='top-card-layout')
-        if main_job_section:
-            print(f"   📋 FOUND MAIN JOB SECTION")
-            
-            # Look for any text containing "repost" in the main job section only
-            main_text = main_job_section.get_text().lower()
-            if 'repost' in main_text:
-                print(f"   🔄 FOUND 'repost' in main job section text")
-                is_reposted = True
-            
-            # Look for multiple time elements within the main job section
-            main_time_elements = main_job_section.find_all('time')
-            if len(main_time_elements) > 1:
-                print(f"   🔄 FOUND MULTIPLE TIME ELEMENTS IN MAIN SECTION ({len(main_time_elements)})")
-                # Check if any of the time elements have different dates
-                dates = [elem.get('datetime', '') for elem in main_time_elements if elem.get('datetime')]
-                if len(set(dates)) > 1:
-                    print(f"   🔄 FOUND DIFFERENT DATES IN MAIN SECTION: {dates} - likely reposted")
-                    is_reposted = True
-            
-            # Look for any elements with "repost" in class names within main section
-            repost_elements = main_job_section.find_all(class_=lambda x: x and 'repost' in x.lower())
-            if repost_elements:
-                print(f"   🔄 FOUND ELEMENTS WITH 'repost' IN CLASS IN MAIN SECTION: {len(repost_elements)}")
-                is_reposted = True
-        else:
-            print(f"   ❌ MAIN JOB SECTION NOT FOUND")
         
         # Parse relative time patterns if we found posted time
         if posted_time_elem and posted_time_text:
@@ -702,7 +666,7 @@ def _parse_job_metadata(soup) -> tuple[str, bool, str]:
     except Exception as e:
         logger.warning(f"Error parsing job metadata: {e}")
     
-    return posted_date, is_reposted, applicant_count
+    return posted_date, applicant_count
 
 
 def _parse_job_details(html_content: str, job_url: str) -> Dict[str, Any]:
@@ -724,8 +688,8 @@ def _parse_job_details(html_content: str, job_url: str) -> Dict[str, Any]:
         location_elem = soup.find('span', class_='topcard__flavor--bullet')
         location = location_elem.get_text(strip=True) if location_elem else ''
         
-        # Extract posted date, reposted status, and applicant count from new structure
-        posted_date, is_reposted, applicant_count = _parse_job_metadata(soup)
+        # Extract posted date and applicant count from new structure
+        posted_date, applicant_count = _parse_job_metadata(soup)
         print(posted_date)
         # Extract job description
         description_elem = soup.find('div', class_='show-more-less-html__markup')
@@ -781,7 +745,6 @@ def _parse_job_details(html_content: str, job_url: str) -> Dict[str, Any]:
             'company_name': company_name,
             'location': location,
             'posted_date': posted_date,
-            'is_reposted': is_reposted,
             'applicant_count': applicant_count,
             'job_description': job_description,
             'salary': salary,

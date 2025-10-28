@@ -4,11 +4,35 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from datetime import timedelta
 import logging
+import re
 
 from .models import JobQuery, JobDetail
 from .api_client import api_client
 
 logger = logging.getLogger(__name__)
+
+
+def extract_linkedin_job_id(job_url):
+    """
+    Extract the LinkedIn job ID from a job URL.
+    
+    Example URL: https://www.linkedin.com/jobs/view/backend-software-engineer-at-login-works-4319344438
+    Returns: 4319344438
+    
+    The job ID is the numeric sequence at the end of the URL path.
+    """
+    if not job_url:
+        return None
+    
+    # Regex pattern to match the job ID at the end of the job title
+    # Matches: -{digits} followed by ? or / or end of string
+    pattern = r'-(\d+)(?:\?|/|$)'
+    match = re.search(pattern, job_url)
+    
+    if match:
+        return match.group(1)
+    
+    return None
 
 
 @shared_task
@@ -55,27 +79,55 @@ def run_job_query(query_id):
                 logger.warning(f"Job data missing job_url: {job_data}")
                 continue
             
-            # Check if job already exists
-            job_detail, created = JobDetail.objects.get_or_create(
-                job_url=job_url,
-                defaults={
-                    'position': job_data.get('position', ''),
-                    'company': job_data.get('company', ''),
-                    'location': job_data.get('location', ''),
-                    'date_posted': job_data.get('date', ''),
-                    'salary': job_data.get('salary', ''),
-                    'company_logo': job_data.get('company_logo', ''),
-                    'ago_time': job_data.get('ago_time', ''),
-                    'job_query': query,
-                }
-            )
+            # Extract LinkedIn job ID from URL
+            linkedin_job_id = extract_linkedin_job_id(job_url)
+            if linkedin_job_id:
+                logger.info(f"Extracted LinkedIn job ID: {linkedin_job_id} from URL: {job_url}")
+            else:
+                logger.warning(f"Could not extract LinkedIn job ID from URL: {job_url}")
+            
+            # Check if job already exists by LinkedIn job ID (if available) or by URL
+            defaults = {
+                'position': job_data.get('position', ''),
+                'company': job_data.get('company', ''),
+                'location': job_data.get('location', ''),
+                'date_posted': job_data.get('date', ''),
+                'salary': job_data.get('salary', ''),
+                'company_logo': job_data.get('company_logo', ''),
+                'ago_time': job_data.get('ago_time', ''),
+                'job_query': query,
+            }
+            
+            # Add LinkedIn job ID if extracted
+            if linkedin_job_id:
+                defaults['linkedin_job_id'] = linkedin_job_id
+            
+            # Try to find existing job by LinkedIn ID first, then by URL
+            job_detail = None
+            created = False
+            
+            if linkedin_job_id:
+                try:
+                    job_detail = JobDetail.objects.get(linkedin_job_id=linkedin_job_id)
+                    # Job already exists
+                    created = False
+                except JobDetail.DoesNotExist:
+                    # No job with this ID, try to get or create by URL
+                    job_detail, created = JobDetail.objects.get_or_create(
+                        job_url=job_url,
+                        defaults=defaults
+                    )
+            else:
+                # No LinkedIn ID, just use URL
+                job_detail, created = JobDetail.objects.get_or_create(
+                    job_url=job_url,
+                    defaults=defaults
+                )
             
             if created:
                 saved_count += 1
-                logger.info(f"Saved new job: {job_detail.position} at {job_detail.company}")
+                logger.info(f"Saved new job: {job_detail.position} at {job_detail.company} (LinkedIn ID: {linkedin_job_id})")
                 
-                # Automatically fetch detailed information for new jobs
-               # fetch_job_details.delay(job_detail.id)
         
         # Update query metadata
         query.last_run = timezone.now()
@@ -226,6 +278,67 @@ def fetch_specific_job_details(job_ids):
         
     except Exception as e:
         logger.error(f"Error in fetch_specific_job_details task: {str(e)}")
+        return f"Error: {str(e)}"
+
+
+@shared_task
+def auto_fetch_job_details():
+    """
+    Automatically fetch details for up to 10 pending jobs
+    Runs every minute to process jobs that need details fetched
+    """
+    try:
+        # Get jobs that need details fetched, ordered by oldest first
+        pending_jobs = JobDetail.objects.filter(
+            details_scraped=False
+        ).order_by('scraped_at')[:10]
+        
+        total_pending = JobDetail.objects.filter(details_scraped=False).count()
+        
+        if not pending_jobs.exists():
+            logger.info("No pending jobs found for detail fetching")
+            return f"No pending jobs found (total pending: {total_pending})"
+        
+        logger.info(f"Fetching details for {pending_jobs.count()} jobs (total pending: {total_pending})")
+        
+        results = []
+        success_count = 0
+        error_count = 0
+        
+        for job in pending_jobs:
+            try:
+                logger.info(f"Fetching details for job {job.id}: {job.position} at {job.company}")
+                
+                # Get job details from API
+                details_result = api_client.get_job_details(job.job_url)
+                
+                if 'error' in details_result:
+                    logger.error(f"Error fetching job details for {job.job_url}: {details_result['error']}")
+                    results.append(f"Error for {job.position} at {job.company}: {details_result['error']}")
+                    error_count += 1
+                    continue
+                
+                job_details = details_result.get('job_details', {})
+                
+                # Update job with detailed information
+                job.update_with_details(job_details)
+                
+                logger.info(f"Successfully updated job details for: {job.position} at {job.company}")
+                results.append(f"✓ {job.position} at {job.company}")
+                success_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error fetching job details for job {job.id}: {str(e)}")
+                results.append(f"✗ Error for {job.id}: {str(e)}")
+                error_count += 1
+        
+        result_message = f"Processed {len(pending_jobs)} jobs: {success_count} successful, {error_count} errors. Total pending: {total_pending}"
+        logger.info(result_message)
+        
+        return result_message
+        
+    except Exception as e:
+        logger.error(f"Error in auto_fetch_job_details task: {str(e)}")
         return f"Error: {str(e)}"
 
 

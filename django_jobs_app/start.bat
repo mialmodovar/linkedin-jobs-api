@@ -27,13 +27,9 @@ REM Start Django development server
 echo 🌐 Starting Django development server...
 start "Django Server" cmd /k "python manage.py runserver"
 
-REM Start Celery worker
-echo 👷 Starting Celery worker...
-start "Celery Worker" cmd /k "celery -A django_jobs_app worker --loglevel=info"
-
-REM Start Celery beat
-echo ⏰ Starting Celery beat...
-start "Celery Beat" cmd /k "celery -A django_jobs_app beat --loglevel=info"
+REM Start Celery worker with beat in the same process
+echo 👷⏰ Starting Celery worker with beat...
+start "Celery Worker with Beat" cmd /k "celery -A django_jobs_app worker --beat --loglevel=info"
 
 REM Start Celery flower
 echo 🌸 Starting Celery flower...

@@ -26,15 +26,10 @@ echo "🌐 Starting Django development server..."
 python manage.py runserver &
 DJANGO_PID=$!
 
-# Start Celery worker
-echo "👷 Starting Celery worker..."
-celery -A django_jobs_app worker --loglevel=info &
-CELERY_WORKER_PID=$!
-
-# Start Celery beat
-echo "⏰ Starting Celery beat..."
-celery -A django_jobs_app beat --loglevel=info &
-CELERY_BEAT_PID=$!
+# Start Celery worker with beat in the same process
+echo "👷⏰ Starting Celery worker with beat..."
+celery -A django_jobs_app worker --beat --loglevel=info &
+CELERY_PID=$!
 
 # Start Celery flower (optional)
 echo "🌸 Starting Celery flower..."
@@ -54,7 +49,7 @@ echo "Press Ctrl+C to stop all services"
 cleanup() {
     echo ""
     echo "🛑 Stopping all services..."
-    kill $DJANGO_PID $CELERY_WORKER_PID $CELERY_BEAT_PID $FLOWER_PID 2>/dev/null
+    kill $DJANGO_PID $CELERY_PID $FLOWER_PID 2>/dev/null
     echo "✅ All services stopped"
     exit 0
 }

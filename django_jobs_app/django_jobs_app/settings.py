@@ -104,5 +104,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+# Celery Beat Schedule
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Automatically fetch job details for up to 10 pending jobs every minute
+    'auto-fetch-job-details': {
+        'task': 'jobs.tasks.auto_fetch_job_details',
+        'schedule': crontab(minute='*'),  # Every minute
+    },
+}
+
 # LinkedIn Jobs API Configuration
 LINKEDIN_JOBS_API_URL = 'http://localhost:8001'  # Your FastAPI service URL
